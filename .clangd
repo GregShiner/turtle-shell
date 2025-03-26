@@ -1,0 +1,2 @@
+CompileFlags:                     # Tweak the parse settings
+  Add: [-std=c23, -Wall, -Wextra]             # treat all files as C++, enable more warnings
