@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,15 +26,46 @@ char *read_input() {
     buf[total_bytes - 1] = '\0';
     return buf;
 }
-// int parse_input(char *input, char **argv) {}
+
+#define ARGV_MALLOC 5
+#define ARGV_DELIM " "
+char **parse_input(char *input) {
+    size_t capacity = ARGV_MALLOC;
+    char **argv = malloc(capacity * sizeof(char*));
+
+    char *token = strtok(input, ARGV_DELIM);
+    size_t i = 0;
+    argv[i] = token;
+
+    while ((token = strtok(NULL, ARGV_DELIM))) {
+        i++;
+        if (i == capacity) {
+            capacity += ARGV_MALLOC;
+            argv = realloc(argv, capacity * sizeof(char*));
+        }
+        argv[i] = token;
+    }
+    argv[i + 1] = NULL;
+    return argv;
+}
+// strtok(3)
 
 int main(int argc, char *argv[]) {
     while (true) {
         printf("$ ");
         fflush(stdout);
-        char **new_argv;
 
-        char *input = read_input();
+        char *line = NULL;
+        size_t size = 0;
+        ssize_t bytes;
+        bytes = getline(&line, &size, stdin);
+        line[bytes - 1] = '\0';
+        char **new_argv = parse_input(line);
+        if (strcmp(new_argv[0], "q") == 0) {
+            free(line);
+            free(new_argv);
+            exit(EXIT_SUCCESS);
+        }
         pid_t pid = fork();
         switch (pid) {
             case -1:
@@ -42,7 +75,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 0:
                 // Child
-                int err = execvp(input, NULL);
+                int err = execvp(new_argv[0], new_argv);
                 // execvp only returns in case of a failure
                 perror("turtle-shell");
                 // printf("whoops %d\n", err);
@@ -53,6 +86,7 @@ int main(int argc, char *argv[]) {
                 waitpid(-1, NULL, 0);
                 break;
         }
-        free(input);
+        free(line);
+        free(new_argv);
     }
 }
