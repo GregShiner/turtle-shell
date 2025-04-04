@@ -48,7 +48,48 @@ char **parse_input(char *input) {
     argv[i + 1] = NULL;
     return argv;
 }
-// strtok(3)
+
+int cd(char *argv[]) {
+    int res;
+    if (argv[1] == NULL) {
+        char *home = getenv("HOME");
+        if (home == NULL) {
+            printf("$HOME is not set\n");
+            return -2;
+        }
+        res = chdir(home);
+    } else {
+        res = chdir(argv[1]);
+    }
+    if (res == -1) {
+        perror("cd");
+    }
+    return res;
+}
+
+int export(char *envvar) {
+    if (envvar == NULL) {
+        return -1;
+    }
+    char *new_env = malloc(strlen(envvar));
+    strcpy(new_env, envvar);
+    int res = putenv(new_env);
+    if (res == -1) {
+        perror("export");
+    }
+    return res;
+}
+
+int unset(char *envvar) {
+    if (envvar == NULL) {
+        printf("Not enough arguments\n");
+    }
+    char *equals = strchr(envvar, '=');
+    if (equals != NULL) {
+        printf("Invalid form\n");
+    }
+    export(envvar);
+}
 
 int main(int argc, char *argv[]) {
     while (true) {
@@ -65,6 +106,30 @@ int main(int argc, char *argv[]) {
             free(line);
             free(new_argv);
             exit(EXIT_SUCCESS);
+        } else if (strcmp(new_argv[0], "exit") == 0) {
+            free(line);
+            free(new_argv);
+            exit(EXIT_SUCCESS);
+        } else if (strcmp(new_argv[0], "cd") == 0) {
+            cd(new_argv);
+            free(line);
+            free(new_argv);
+            continue;
+        } else if (strcmp(new_argv[0], "export") == 0) {
+            if (new_argv[1] == NULL) {
+                new_argv[0] = "env";
+                new_argv[1] = NULL;
+            } else {
+                export(new_argv[1]);
+                free(line);
+                free(new_argv);
+                continue;
+            }
+        } else if (strcmp(new_argv[0], "unset") == 0) {
+            unset(new_argv[1]);
+            free(line);
+            free(new_argv);
+            continue;
         }
         pid_t pid = fork();
         switch (pid) {
